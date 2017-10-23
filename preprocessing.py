@@ -24,7 +24,7 @@ def readFiles(folderPath, quantity):
     groundtruth = list()
     subfolders = glob(folderPath + "/*/")[:quantity]
     for folder in subfolders:
-        print "reading ", folder
+        # print "reading ", folder
 
         lft = cv.imread(folder + LEFT_IMAGE_FILENAME, cv.IMREAD_GRAYSCALE)
         rgt = cv.imread(folder + RIGHT_IMAGE_FILENAME, cv.IMREAD_GRAYSCALE)
@@ -59,6 +59,7 @@ def computeDisparities(images):
 def generateData(disparities, groundtruth):
     data = list()
     labels = list()
+
     for img_idx in range(len(disparities)):
         disp = disparities[img_idx]
         gt = groundtruth[img_idx]
@@ -69,14 +70,16 @@ def generateData(disparities, groundtruth):
                 winGt = np.int_(gt[i:(i+WINDOW_SIZE), j:(j+WINDOW_SIZE)])
 
                 # normalizing by subtracting the center pixel
-                winDisp = winDisp - winDisp[HALF_WINDOW_SIZE, HALF_WINDOW_SIZE]
-                winGt = winGt - winGt[HALF_WINDOW_SIZE, HALF_WINDOW_SIZE]
+                winDispNorm = winDisp - winDisp[HALF_WINDOW_SIZE, HALF_WINDOW_SIZE]
+                winGtNorm = winGt - winGt[HALF_WINDOW_SIZE, HALF_WINDOW_SIZE]
 
-                label = compareDisparities(winDisp, winGt)
+                # label = compareDisparities(winDispNorm, winGtNorm)
+                label = compareDisparities2(winDisp, winGt)
 
-                data.append(winDisp.reshape([1,winDisp.size]))
+                data.append(winDisp.reshape(winDisp.size))
+                # data.append(winDispNorm.reshape(winDispNorm.size))
                 labels.append(label)
-    return data, labels
+    return np.array(data), np.array(labels)
 
 def compareDisparities(win1, win2):
     s1 = win1.sum()
@@ -84,22 +87,26 @@ def compareDisparities(win1, win2):
     return s1==s2
     # return abs(s1-s2) <= 1
 
+def compareDisparities2(win1, win2):
+    half_len = int(win1.shape[0]/2)
+    return abs(win1[half_len, half_len] - win2[half_len, half_len]) <= 1
+
 def process(folder=DEFAULT_FOLDER_NAME,
             quantity=DEFAULT_QUANTITY,
             plot=False,
             outputData=DEFAULT_DATA_FILE,
             outputLabels=DEFAULT_LABELS_FILE):
+    print "processing..."
     images, groundtruth = readFiles(folder, quantity)
     disparities = computeDisparities(images)
     data, labels = generateData(disparities, groundtruth)
 
-    positives = [x for x in labels if x]
-    print "ratio true labels: ", len(positives) / len(data)
-
-
-    zeros = [x for x in data if not x.any()]
-    print "positives: ", len(positives)
-    print "zeros: ", len(zeros)
+    # positives = [x for x in labels if x]
+    # print "ratio true labels: ", len(positives) / len(data)
+    # zeros = [x for x in data if not x.any()]
+    # print "data: ", len(data)
+    # print "positives: ", len(positives)
+    # print "zeros: ", len(zeros)
 
     if (plot):
         import matplotlib.pyplot as plt
